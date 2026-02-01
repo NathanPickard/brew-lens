@@ -93,11 +93,13 @@ function AnalyzeBrewPage() {
           channeling: analysisData.channeling,
           overExtraction: analysisData.overExtraction,
           aiSuggestions: analysisData.aiSuggestions,
-          visualFeedback: analysisData.visualFeedback as {
-            colorAnalysis: string
-            patternAnalysis: string
-            textureNotes: string
-          },
+          visualFeedback: typeof analysisData.visualFeedback === 'string' 
+            ? JSON.parse(analysisData.visualFeedback)
+            : analysisData.visualFeedback as {
+                colorAnalysis: string
+                patternAnalysis: string
+                textureNotes: string
+              },
         }
       }
 
@@ -243,7 +245,7 @@ function AnalyzeBrewPage() {
                     <div
                       className={`flex-1 p-3 rounded-lg ${analysisResult.channeling ? 'bg-red-100' : 'bg-green-100'}`}
                     >
-                      <p className="text-sm font-medium">
+                      <p className="text-sm font-medium whitespace-nowrap">
                         {analysisResult.channeling
                           ? '⚠️ Channeling Detected'
                           : '✓ No Channeling'}
@@ -252,7 +254,7 @@ function AnalyzeBrewPage() {
                     <div
                       className={`flex-1 p-3 rounded-lg ${analysisResult.overExtraction ? 'bg-red-100' : 'bg-green-100'}`}
                     >
-                      <p className="text-sm font-medium">
+                      <p className="text-sm font-medium whitespace-nowrap">
                         {analysisResult.overExtraction
                           ? '⚠️ Over-Extracted'
                           : '✓ Good Extraction'}
