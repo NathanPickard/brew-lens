@@ -2,12 +2,18 @@ import { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
 import { RouterProvider, createRouter } from '@tanstack/react-router'
 import { Amplify } from 'aws-amplify'
+import { fetchAuthSession } from 'aws-amplify/auth'
 
 import * as TanStackQueryProvider from './integrations/tanstack-query/root-provider.tsx'
 import outputs from '../amplify_outputs.json'
 
 // Configure Amplify
 Amplify.configure(outputs)
+
+// Initialize guest session for unauthenticated users
+fetchAuthSession().catch((error) => {
+  console.error('Error initializing auth session:', error)
+})
 
 // Import the generated route tree
 import { routeTree } from './routeTree.gen'

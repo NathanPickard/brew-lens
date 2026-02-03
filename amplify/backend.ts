@@ -16,6 +16,23 @@ const backend = defineBackend({
 // Get the S3 bucket name
 const storageBucket = backend.storage.resources.bucket
 
+// Enable unauthenticated (guest) access
+backend.auth.resources.unauthenticatedUserIamRole.addToPrincipalPolicy(
+  new PolicyStatement({
+    effect: Effect.ALLOW,
+    actions: ['appsync:GraphQL'],
+    resources: [`${backend.data.resources.graphqlApi.arn}/*`],
+  })
+)
+
+backend.auth.resources.unauthenticatedUserIamRole.addToPrincipalPolicy(
+  new PolicyStatement({
+    effect: Effect.ALLOW,
+    actions: ['s3:GetObject', 's3:PutObject'],
+    resources: [`${storageBucket.bucketArn}/brew-photos/*`],
+  })
+)
+
 // Grant Lambda access to S3 bucket
 const analyzeBrewLambda = backend.analyzeBrewFunction.resources.lambda
 storageBucket.grantRead(analyzeBrewLambda)

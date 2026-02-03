@@ -47,17 +47,27 @@ function AnalyzeBrewPage() {
       const timestamp = Date.now()
       const photoKey = `brew-photos/${timestamp}-${selectedFile.name}`
       
+      console.log('Uploading photo to S3:', photoKey)
       await uploadData({
         path: photoKey,
         data: selectedFile,
       }).result
+      console.log('Photo uploaded successfully')
 
       // Create BrewLog entry
+      console.log('Creating brew log entry...')
       const brewLog = await client.models.BrewLog.create({
         photoKey,
         brewMethod,
         analysisStatus: useMockData ? 'pending' : 'analyzing',
       })
+      
+      if (brewLog.errors) {
+        console.error('Error creating brew log:', brewLog.errors)
+        throw new Error('Failed to create brew log entry')
+      }
+      
+      console.log('Brew log created:', brewLog.data)
 
       let result
 
@@ -105,7 +115,8 @@ function AnalyzeBrewPage() {
 
       // Update the BrewLog with analysis results
       if (brewLog.data) {
-        await client.models.BrewLog.update({
+        console.log('Updating brew log with results:', brewLog.data.id)
+        const updateResult = await client.models.BrewLog.update({
           id: brewLog.data.id,
           analysisStatus: 'completed',
           extractionScore: result.extractionScore,
@@ -114,12 +125,20 @@ function AnalyzeBrewPage() {
           aiSuggestions: result.aiSuggestions,
           visualFeedback: result.visualFeedback,
         })
+        
+        if (updateResult.errors) {
+          console.error('Error updating brew log:', updateResult.errors)
+          throw new Error('Failed to save analysis results')
+        }
+        
+        console.log('Brew log updated successfully:', updateResult.data)
       }
 
       setAnalysisResult(result)
     } catch (error) {
       console.error('Analysis error:', error)
-      alert('Failed to analyze brew. Please try again.')
+      const errorMessage = error instanceof Error ? error.message : 'Failed to analyze brew'
+      alert(`${errorMessage}. Please try again.`)
     } finally {
       setIsAnalyzing(false)
     }

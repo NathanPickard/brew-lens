@@ -1,5 +1,6 @@
-import { type ClientSchema, a, defineData } from '@aws-amplify/backend'
+import { a, defineData } from '@aws-amplify/backend'
 import { analyzeBrewFunction } from '../functions/analyze-brew/resource'
+import type { ClientSchema } from '@aws-amplify/backend'
 
 const schema = a.schema({
   BrewLog: a

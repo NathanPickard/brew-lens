@@ -21,18 +21,32 @@ function HistoryPage() {
       photoUrl: string
     }>
   >([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchBrews()
   }, [])
 
   const fetchBrews = async () => {
+    setIsLoading(true)
+    setError(null)
     try {
-      const { data } = await client.models.BrewLog.list({
+      console.log('Fetching brew logs...')
+      const { data, errors } = await client.models.BrewLog.list({
         filter: {
           analysisStatus: { eq: 'completed' },
         },
       })
+
+      if (errors && errors.length > 0) {
+        console.error('GraphQL errors:', errors)
+        setError(`Failed to fetch brews: ${errors[0].message}`)
+        setIsLoading(false)
+        return
+      }
+
+      console.log('Fetched brews:', data)
 
       const brewsWithUrls = await Promise.all(
         data.map(async (brew) => {
@@ -40,8 +54,8 @@ function HistoryPage() {
           try {
             const urlResult = await getUrl({ path: brew.photoKey })
             photoUrl = urlResult.url.toString()
-          } catch (error) {
-            console.error('Error getting photo URL:', error)
+          } catch (photoError) {
+            console.error('Error getting photo URL:', photoError)
           }
 
           return {
@@ -55,8 +69,11 @@ function HistoryPage() {
       )
 
       setBrews(brewsWithUrls)
-    } catch (error) {
-      console.error('Error fetching brews:', error)
+    } catch (fetchError) {
+      console.error('Error fetching brews:', fetchError)
+      setError(fetchError instanceof Error ? fetchError.message : 'Failed to fetch brew history')
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -77,7 +94,25 @@ function HistoryPage() {
           </Link>
         </div>
 
-        {brews.length > 0 ? (
+        {isLoading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading your brew history...</p>
+            </div>
+          </div>
+        ) : error ? (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+            <h3 className="text-red-800 font-semibold mb-2">Error Loading History</h3>
+            <p className="text-red-600">{error}</p>
+            <button
+              onClick={fetchBrews}
+              className="mt-4 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        ) : brews.length > 0 ? (
           <>
             {/* Stats Summary */}
             <div className="grid grid-cols-3 gap-6 mb-8">
