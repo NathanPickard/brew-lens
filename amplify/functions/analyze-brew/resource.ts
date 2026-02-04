@@ -5,6 +5,7 @@ export const analyzeBrewFunction = defineFunction({
   entry: './handler.ts',
   timeoutSeconds: 60,
   memoryMB: 512,
+  resourceGroupName: 'data',
   environment: {
     BUCKET_NAME: '',
   },
