@@ -1,54 +1,46 @@
 import { defineBackend } from '@aws-amplify/backend'
 import { Effect, PolicyStatement } from 'aws-cdk-lib/aws-iam'
+import { Function as LambdaFunction } from 'aws-cdk-lib/aws-lambda'
 import { auth } from './auth/resource'
 import { data } from './data/resource'
-import { analyzeBrewFunction } from './functions/analyze-brew/resource'
 import { storage } from './storage/resource'
-import type { CfnFunction } from 'aws-cdk-lib/aws-lambda'
 
 const backend = defineBackend({
   auth,
   data,
   storage,
-  analyzeBrewFunction,
 })
 
-// Get the S3 bucket name
+// Get the S3 bucket
 const storageBucket = backend.storage.resources.bucket
 
-// Enable unauthenticated (guest) access
-backend.auth.resources.unauthenticatedUserIamRole.addToPrincipalPolicy(
-  new PolicyStatement({
-    effect: Effect.ALLOW,
-    actions: ['appsync:GraphQL'],
-    resources: [`${backend.data.resources.graphqlApi.arn}/*`],
-  })
-)
+// Find the Lambda function in the data stack (assigned via resourceGroupName: 'data')
+const dataStack = backend.data.stack
+const lambdaFunction = dataStack.node.findAll().find(
+  (construct) =>
+    construct instanceof LambdaFunction &&
+    construct.node.id.includes('analyzebrew')
+) as LambdaFunction | undefined
 
-backend.auth.resources.unauthenticatedUserIamRole.addToPrincipalPolicy(
-  new PolicyStatement({
-    effect: Effect.ALLOW,
-    actions: ['s3:GetObject', 's3:PutObject'],
-    resources: [`${storageBucket.bucketArn}/brew-photos/*`],
-  })
-)
+if (lambdaFunction) {
+  // Grant Lambda access to S3
+  storageBucket.grantRead(lambdaFunction)
 
-// Grant Lambda access to S3 bucket
-const analyzeBrewLambda = backend.analyzeBrewFunction.resources.lambda
-storageBucket.grantRead(analyzeBrewLambda)
+  // Add environment variable for bucket name
+  lambdaFunction.addEnvironment('BUCKET_NAME', storageBucket.bucketName)
 
-// Add Bedrock permissions to Lambda
-analyzeBrewLambda.addToRolePolicy(
-  new PolicyStatement({
-    effect: Effect.ALLOW,
-    actions: ['bedrock:InvokeModel'],
-    resources: [
-      'arn:aws:bedrock:*::foundation-model/amazon.nova-*',
-      'arn:aws:bedrock:*:*:inference-profile/*',
-    ],
-  })
-)
+  // Add Bedrock permissions to Lambda
+  lambdaFunction.addToRolePolicy(
+    new PolicyStatement({
+      effect: Effect.ALLOW,
+      actions: ['bedrock:InvokeModel'],
+      resources: [
+        'arn:aws:bedrock:*::foundation-model/amazon.nova-*',
+        'arn:aws:bedrock:*:*:inference-profile/*',
+      ],
+    })
+  )
+}
 
-// Set bucket name as environment variable via CFN
-const cfnFunction = analyzeBrewLambda.node.defaultChild as CfnFunction
-cfnFunction.addPropertyOverride('Environment.Variables.BUCKET_NAME', storageBucket.bucketName)
+// Note: Guest access to GraphQL API is handled by schema authorization rules
+// No need to add policies here as it would create circular dependencies

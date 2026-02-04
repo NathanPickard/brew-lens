@@ -6,7 +6,4 @@ export const analyzeBrewFunction = defineFunction({
   timeoutSeconds: 60,
   memoryMB: 512,
   resourceGroupName: 'data',
-  environment: {
-    BUCKET_NAME: '',
-  },
 })
