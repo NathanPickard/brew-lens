@@ -123,7 +123,7 @@ function AnalyzeBrewPage() {
           channeling: result.channeling,
           overExtraction: result.overExtraction,
           aiSuggestions: result.aiSuggestions,
-          visualFeedback: result.visualFeedback,
+          visualFeedback: JSON.stringify(result.visualFeedback),
         })
         
         if (updateResult.errors) {

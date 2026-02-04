@@ -15,11 +15,16 @@ const backend = defineBackend({
 const storageBucket = backend.storage.resources.bucket
 
 // Find the Lambda function in the data stack (assigned via resourceGroupName: 'data')
+// The function will be nested somewhere in the data stack resources
 const dataStack = backend.data.stack
-const lambdaFunction = dataStack.node.findAll().find(
+const allConstructs = dataStack.node.findAll()
+
+// More robust search - look for any Lambda function with 'analyze' in the id (case-insensitive)
+const lambdaFunction = allConstructs.find(
   (construct) =>
     construct instanceof LambdaFunction &&
-    construct.node.id.includes('analyzebrew')
+    (construct.node.id.toLowerCase().includes('analyze') ||
+      construct.node.id.toLowerCase().includes('brew'))
 ) as LambdaFunction | undefined
 
 if (lambdaFunction) {
@@ -40,6 +45,9 @@ if (lambdaFunction) {
       ],
     })
   )
+} else {
+  console.warn('Warning: Could not find analyze-brew Lambda function in data stack')
+  console.warn('Available constructs:', allConstructs.map(c => c.node.id).join(', '))
 }
 
 // Note: Guest access to GraphQL API is handled by schema authorization rules
